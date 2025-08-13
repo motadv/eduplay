@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    /* Type Checking */
+    "strict": true,
+    "noImplicitAny": true,
+    
+    /* Modules */
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "baseUrl": "./src", // Permite imports a partir de 'src/'
+
+    /* Emit */
+    "outDir": "./dist", // Onde o código compilado será salvo
+    
+    /* Interop */
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    
+    /* Language and Environment */
+    "target": "ES2022",
+    "lib": ["ES2022"],
+
+    /* Completeness */
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"] // Quais arquivos o TypeScript deve compilar
+}
