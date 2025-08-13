@@ -9,7 +9,7 @@ const httpServer = createServer(app);
 const _PORT = 8082;
 
 const io = new SocketIOServer(httpServer, {
-  cors: { origin: ["http://localhost:8081", "http://192.168.1.23:8081", "http://192.168.1.21:8081", "http://192.168.0.148:8081"] },
+  cors: { origin: ["http://localhost:8081", "http://192.168.1.23:8081", "http://192.168.1.21:8081", "http://192.168.0.148:8081", "http://10.100.20.70:8081"] },
 });
 
 const rooms: { [roomId: string]: any } = {};
