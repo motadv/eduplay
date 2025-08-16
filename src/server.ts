@@ -3,6 +3,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import playlist from "./content/set1/playlist";
+import { Room } from "types/types";
 
 const app = express();
 const httpServer = createServer(app);
@@ -12,7 +13,15 @@ const io = new SocketIOServer(httpServer, {
   cors: { origin: ["http://localhost:8081", "http://192.168.1.23:8081", "http://192.168.1.21:8081", "http://192.168.0.148:8081", "http://10.100.20.70:8081"] },
 });
 
-const rooms: { [roomId: string]: any } = {};
+const introVideo = {
+  src: 'media/eduplay/videos/intro.mp4',
+  qrCodeDelay: 40, // Tempo em segundos antes de exibir o QR Code
+  qrCodeDuration: 20 // Tempo em segundos que o QR Code ficará visível
+}
+
+const INTRO_TOTAL_DURATION = introVideo.qrCodeDelay + introVideo.qrCodeDuration;
+
+const rooms: { [roomId: string]: Room } = {};
 
 function startNextStepInPlaylist(roomId: string, io: SocketIOServer) {
   const room = rooms[roomId];
@@ -48,6 +57,7 @@ function startNextStepInPlaylist(roomId: string, io: SocketIOServer) {
     // Reseta a resposta de cada jogador para 'null' antes da nova pergunta.
     if (room.players && room.players.length > 0) {
       room.players.forEach((player: any) => {
+        player.isCorrect = null;
         player.answer = null;
       });
     }
@@ -63,14 +73,29 @@ function startNextStepInPlaylist(roomId: string, io: SocketIOServer) {
     setTimeout(() => {
       if (rooms[roomId] && rooms[roomId].state === "question") {
         room.state = "results";
-        // Envia os resultados finais e a resposta correta para todos
-        io.to(roomId).emit("quiz:endQuestion", { 
-          results: room.results, 
-          correctAnswerIndex: currentStep.correctAnswer 
+
+        const stats = {
+          correct: 0,
+          incorrect: 0
+        };
+
+        room.players.forEach((player: any) => {
+          if (player.isCorrect === true) {
+            stats.correct++;
+          } else if (player.isCorrect === false) {
+            stats.incorrect++;
+          }
         });
-        
-        // Pausa de 7 segundos para ver os resultados antes da próxima etapa
-        setTimeout(() => startNextStepInPlaylist(roomId, io), 7000);
+
+        // Envia os resultados finais e a resposta correta para todos
+        io.to(roomId).emit("quiz:endQuestion", {
+          results: room.results,
+          correctAnswerIndex: currentStep.correctAnswer,
+          stats: stats,
+        });
+
+        // Pausa de 5 segundos para ver os resultados antes da próxima etapa
+        setTimeout(() => startNextStepInPlaylist(roomId, io), 5000);
       }
     }, currentStep.duration * 1000);
   }
@@ -93,9 +118,17 @@ io.on("connection", (socket: Socket) => {
           presenterId: socket.id,
           players: [],
           playlistIndex: 0,
+          results: {},
+          currentQuestion: null,
         };
         console.log(`[SALA CRIADA] Sala ${roomId} criada por ${socket.id}.`);
         socket.emit("roomCreated", `Sala ${roomId} criada com sucesso.`);
+        socket.emit("playIntroVideo", introVideo);
+
+        setTimeout(() => {
+          console.log(`[QUIZ START] Introdução finalizada na sala ${roomId}.`);
+          startNextStepInPlaylist(roomId, io);
+        }, INTRO_TOTAL_DURATION * 1000);
       }
       return;
     }
@@ -108,22 +141,9 @@ io.on("connection", (socket: Socket) => {
     
     const room = rooms[roomId];
     if (!room.players.find((p: any) => p.id === socket.id)) {
-      room.players.push({ id: socket.id, answer: null });
+      room.players.push({ id: socket.id, answer: null, isCorrect: null });
     }
     console.log(`[JOGADOR ENTROU] Jogador ${socket.id} na sala ${roomId}. Total: ${room.players.length}`);
-
-    if (room.players.length === 1 && room.state === "waiting") {
-      console.log(`[PRIMEIRO JOGADOR] Iniciando contagem regressiva para a sala: ${roomId}`);
-      room.state = "countdown";
-      const countdownDuration = 15;
-      io.to(roomId).emit("startCountdown", countdownDuration);
-
-      setTimeout(() => {
-        if (rooms[roomId] && rooms[roomId].state === "countdown") {
-          startNextStepInPlaylist(roomId, io);
-        }
-      }, countdownDuration * 1000);
-    }
     socket.emit("joined", `Você entrou na sala: ${roomId}`);
   });
 
@@ -139,6 +159,8 @@ io.on("connection", (socket: Socket) => {
     player.answer = answerIndex;
 
     const isCorrect = (room.currentQuestion.correctAnswer === answerIndex);
+    player.isCorrect = isCorrect;
+
     socket.emit('quiz:feedback', { correct: isCorrect });
 
     const answerLetter = String.fromCharCode(65 + answerIndex);
