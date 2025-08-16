@@ -15,7 +15,7 @@ const io = new SocketIOServer(httpServer, {
 
 const introVideo = {
   src: 'media/eduplay/videos/intro.mp4',
-  qrCodeDelay: 40, // Tempo em segundos antes de exibir o QR Code
+  qrCodeDelay: 42, // Tempo em segundos antes de exibir o QR Code
   qrCodeDuration: 20 // Tempo em segundos que o QR Code ficará visível
 }
 
