@@ -10,13 +10,16 @@ const httpServer = createServer(app);
 const _PORT = 8082;
 
 const io = new SocketIOServer(httpServer, {
-  cors: { origin: ["http://localhost:8081", "http://192.168.1.23:8081", "http://192.168.1.21:8081", "http://192.168.0.148:8081", "http://10.100.20.70:8081"] },
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
 const introVideo = {
-  src: 'media/eduplay/videos/intro.mp4',
-  qrCodeDelay: 42, // Tempo em segundos antes de exibir o QR Code
-  qrCodeDuration: 20 // Tempo em segundos que o QR Code ficará visível
+  src: 'media/eduplay/videos/intro_cut.mp4',
+  qrCodeDelay: 16, // Tempo em segundos antes de exibir o QR Code
+  qrCodeDuration: 35-16 // Tempo em segundos que o QR Code ficará visível
 }
 
 const INTRO_TOTAL_DURATION = introVideo.qrCodeDelay + introVideo.qrCodeDuration;
